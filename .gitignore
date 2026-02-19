@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.BS_Store
+.DS_Store
+# Sensitive Raw Data (Keep local only!)
+data/raw/*.xlsx
+data/raw/*.pdf
+data/raw/*.png
+# Keep the processed data so the app works in the cloud
+!data/processed/*.parquet

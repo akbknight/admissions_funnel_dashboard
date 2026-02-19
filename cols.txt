@@ -1,0 +1,128 @@
+--- Fall 2026 ---
+Application ID
+Learning Program Lookup
+Is F1 or J1 Visa Required
+Application Status
+Application Substatus
+Application Started Date
+Applied Date
+Application Complete Date
+Admitted Date
+Date Deposit Extended to
+Deposit Date
+Deferred Date
+Withdrawn Date
+Decision Released Date
+School/College of Interest
+Program Colleague Code
+Overall Evaluation Rating
+Scholarship Rating
+Intended US Visa?
+Is Deposit
+Is Withdrawn
+I-20 Request Date
+I-20 Tracking Status
+I-20 Received Date
+Visa Notes
+Visa Request Date
+Country of Citizenship
+Citizenship Status
+Visa Type
+Visa Outcome
+Visa Status
+Visa Approval Date
+Visa Appointment Date
+Other intended visa type
+Visa Other
+PIIRF Submitted On
+Academic Term
+
+--- Recruit Export ---
+erpid (Prospect) (Person)
+First Name
+Last Name
+Entry Term (Opportunity) (Opportunity)
+a26 Original Term (Pre-Deferral) (Opportunity) (Opportunity)
+Academic Program (Application) (Application)
+a26 Secondary Academic Program of Interest (Application) (Application)
+a26 Dual Degree (Opportunity) (Opportunity)
+Course Load (Opportunity) (Opportunity)
+Folder Status
+a26 Are you a U.S. Citizen? (Application) (Application)
+a26 Program Option (Application) (Application)
+a26 permanent resident? (Application) (Application)
+Primary Non-U.S. Citizenship (Application) (Application)
+a26 Future Visa Type (Application) (Application)
+a26 Primary College Academic History (Opportunity) (Opportunity)
+Unlisted School Info (a26 Primary College UG Academic History) (College Academic History)
+Major or Field of Study (a26 Primary College UG Academic History) (College Academic History)
+a26 Verified UGPA
+Domestic or International 4.0 Scale UGPA
+a26- Verified GRE Analytic Writing
+a26 Verified GRE Quantitative
+a26 Verfied GRE Verbal
+a26 Verified Total GMAT
+a26 Verified MWE
+Gender (Application) (Application)
+Birth Date (Application) (Application)
+White (Application) (Application)
+a26 Hispanic/Latino (Application) (Application)
+Asian (Application) (Application)
+Black or African American (Application) (Application)
+Native Hawaiian or Other Pacific Islander (Application) (Application)
+American Indian or Alaska Native (Application) (Application)
+Are you a First Generation Applicant (Application) (Application)
+Veteran (Application) (Application)
+Started (Opportunity) (Opportunity)
+Submitted (Opportunity) (Opportunity)
+Marked Completed On (Application) (Application)
+Admitted (Opportunity) (Opportunity)
+Confirmed (Opportunity) (Opportunity)
+Enrolled (Opportunity) (Opportunity)
+Deferred (Opportunity) (Opportunity)
+Funnel Stage (Opportunity) (Opportunity)
+Total Amount (a26 Award Information) (a26 Award Information)
+Award per credit (by Academic Program) (a26 Award Information) (a26 Award Information)
+Total Award Amount (by Academic Program) (a26 Award Information) (a26 Award Information)
+a26 Award Information
+a26 Employer sponsorship (Application) (Application)
+a26 Current Employer (Prospect) (Person)
+a26 Interview Decision MBA
+a26 Kogod Interview Date
+City (Application) (Application)
+State/Province (Application) (Application)
+Country (Application) (Application)
+International I-20 Process Status
+a26 I-20 Received On
+a26 PIIRF Submitted By
+a26 PIIRF Submitted On
+a26 Visa Appointment Date
+a26 Visa Comments
+a26 Visa Denied On
+a26 Visa Outcome
+a26 Visa Received On
+Address 1: State/Province (Prospect) (Person)
+a26 Number of Unofficial Transcripts
+a26 Official Transcripts Needed Email
+a26 Partnership
+a26 PD Proposed Decision
+a26 Rec for Assistantship
+a26 Recommendation Explanation
+a26 Reviewer 1
+a26 Reviewer 1 Comments
+a26 Reviewer 1 Date
+a26 Reviewer 1 Status
+a26 Reviewer 2
+a26 Reviewer 2 Comments
+a26 Reviewer 2 Date
+a26 Reviewer 2 Status
+Comments
+Hubspot Id (Prospect) (Person)
+Hubspot Deal Created?
+Shared Notes
+a26 Current Employer (a26 Primary College UG Academic History) (College Academic History)
+Is Missing Required Supplemental Items (Prospect) (Person)
+Is Missing Supplemental Items (Prospect) (Person)
+Missing Supplemental Items List (Prospect) (Person)
+Work Award (enter without dollar sign) (Prospect) (Person)
+Internal Notes
