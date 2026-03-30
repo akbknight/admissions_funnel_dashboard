@@ -1,5 +1,5 @@
 
-import pandas as pd
+import pandas as pd  # type: ignore
 import os
 
 RAW_DIR = "data/raw"

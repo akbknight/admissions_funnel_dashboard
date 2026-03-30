@@ -1,5 +1,5 @@
-import pandas as pd
-import duckdb
+import pandas as pd  # type: ignore
+import duckdb  # type: ignore
 import os
 from datetime import datetime
 import logging
@@ -68,13 +68,25 @@ def process_data(df_f26, df_f25):
 
     logger.info("Standardizing schemas...")
     
+    # --- TASK 3: DIAGNOSTICS ---
+    logger.info("F26 Raw Residency Diagnostics:")
+    for col in ["Citizenship Status", "Country of Citizenship", "Is F1 or J1 Visa Required"]:
+        if col in df_f26.columns:
+            logger.info(f"Unique values in '{col}': {df_f26[col].dropna().unique().tolist()[:10]}")
+    
     # Unify F26
     query_f26 = """
         SELECT 
             CAST("Application ID" AS VARCHAR) as id,
             'Fall 2026' as term,
             "Learning Program Lookup" as program,
-            CASE WHEN "Citizenship Status" = 'International' THEN 'International' ELSE 'Domestic' END as residency,
+            CASE 
+                WHEN "Citizenship Status" IN ('International', 'Non-U.S. Citizen', 'Non-Citizen', 'Foreign National') THEN 'International'
+                WHEN CAST("Is F1 or J1 Visa Required" AS VARCHAR) IN ('Yes', 'TRUE', '1', 'True', 'true') THEN 'International'
+                WHEN "Country of Citizenship" IS NOT NULL AND "Country of Citizenship" NOT IN ('United States', 'US', 'USA', 'U.S.', 'United States of America', '') THEN 'International'
+                WHEN "Citizenship Status" IN ('U.S. Citizen', 'Domestic', 'Permanent Resident', 'US Citizen') THEN 'Domestic'
+                ELSE 'Unknown'
+            END as residency,
             "Application Status" as status,
             "Application Substatus" as substatus,
             CAST("Application Started Date" AS DATE) as started_date,
@@ -215,6 +227,15 @@ def process_data(df_f26, df_f25):
     
     # Verification
     print("Generated Columns:", df_processed.columns.tolist())
+    
+    f26_intl = len(df_processed[(df_processed['term'] == 'Fall 2026') & (df_processed['residency'] == 'International')])
+    f26_unk = len(df_processed[(df_processed['term'] == 'Fall 2026') & (df_processed['residency'] == 'Unknown')])
+    logger.info(f"F26 International Count: {f26_intl}")
+    logger.info(f"F26 Unknown Residency Count: {f26_unk}")
+    if f26_intl == 0:
+        logger.warning("F26 still has 0 International students. Check raw column values above.")
+    if f26_unk > 0:
+        logger.warning(f"F26 has {f26_unk} Unknown residency rows. Add more logic to capture them.")
     
     return df_processed
 

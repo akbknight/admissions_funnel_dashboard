@@ -1,5 +1,5 @@
 
-import duckdb
+import duckdb  # type: ignore
 try:
     df = duckdb.sql("SELECT * FROM 'data/processed/master_funnel_data.parquet' LIMIT 1").df()
     print("COLUMNS_FOUND:", df.columns.tolist())

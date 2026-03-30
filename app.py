@@ -1,12 +1,22 @@
 
-import streamlit as st
-import pandas as pd
-import duckdb
-import plotly.express as px
-import plotly.graph_objects as go
+import streamlit as st  # type: ignore
+import pandas as pd  # type: ignore
+import duckdb  # type: ignore
+import plotly.express as px  # type: ignore
+import plotly.graph_objects as go  # type: ignore
 from datetime import datetime
 import os
 import textwrap
+import io
+from fpdf import FPDF  # type: ignore
+import asyncio
+import sys
+
+if sys.platform == 'win32':
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
 
 # --- CONFIGURATION (Must be first) ---
 st.set_page_config(page_title="Kogod Admissions Funnel", layout="wide", initial_sidebar_state="expanded")
@@ -197,8 +207,37 @@ def load_data():
 df_master = load_data()
 if df_master.empty: st.stop()
 
+# --- PROGRAM CONSOLIDATION ---
+def remap_program(prog):
+    p = str(prog)
+    if 'Real Estate' in p or 'Taxation' in p:
+        return None
+    if 'Certificate in' in p:
+        return 'Certificates (Combined)'
+        
+    if p.startswith('Bach/MS'):
+        p = p.replace('Bach/MS', 'MS')
+        
+    if p == 'MS in Analytics':
+        return 'MS in Business Analytics and AI'
+    if p == 'MS in Analytics (Online)':
+        return 'MS in Business Analytics and AI (Online)'
+
+    if 'MBA' in p:
+        if p.strip() in ['Online MBA', 'LGEP MBA']:
+            return p.strip()
+        return 'Full-Time MBA'
+        
+    return p
+
+df_master['program_display'] = df_master['program'].apply(remap_program)
+df_master = df_master.dropna(subset=['program_display'])
+
 # --- LOGIC ---
-df_master['category'] = df_master['program'].apply(lambda x: 'MBA' if 'mba' in str(x).lower() else ('Online' if 'online' in str(x).lower() else 'Specialized Masters'))
+df_master['category'] = df_master['program_display'].apply(
+    lambda x: 'MBA' if 'mba' in str(x).lower() 
+    else ('Online' if 'online' in str(x).lower() else 'Specialized Masters')
+)
 
 def calc_metrics(df, term):
     sub = df[df['term'] == term]
@@ -261,14 +300,91 @@ def html_dep_mini(label, key, m26, m25):
         f'</div></div>'
     )
 
+def generate_pdf_report(df):
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.add_page()
+    pdf.set_font('helvetica', 'B', 16)
+    pdf.set_text_color(0, 79, 159) # AU Brand Blue
+    pdf.cell(0, 10, f'Kogod Admissions Funnel - Fall 2026 vs Fall 2025 ({datetime.now().strftime("%Y-%m-%d")})', align='C', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # Table Header
+    pdf.set_font('helvetica', 'B', 8)
+    pdf.set_fill_color(0, 79, 159)
+    pdf.set_text_color(255, 255, 255)
+    cols = ['Program', 'Started', 'Submitted', 'Completed', 'Admitted', 'Net Deposits']
+    col_widths = {0: 80, 1: 39, 2: 39, 3: 39, 4: 39, 5: 39}
+    for i, col in enumerate(cols):
+        pdf.cell(col_widths[i], 8, col, border=1, fill=True, align='C')
+    pdf.ln(8)
+    
+    pdf.set_text_color(0, 0, 0)
+    programs = sorted(df['program_display'].unique())
+    
+    for p in programs + ['Total']:
+        sub = df if p == 'Total' else df[df['program_display'] == p]
+        if sub.empty: continue
+        
+        m26 = calc_metrics(sub, 'Fall 2026')
+        m25 = calc_metrics(sub, 'Fall 2025')
+        
+        pdf.set_font('helvetica', 'B' if p == 'Total' else '', 8)
+        
+        # Determine cell fill
+        fill = True if p == 'Total' else False
+        if p == 'Total':
+            pdf.set_fill_color(240, 240, 240)
+            
+        pdf.cell(col_widths[0], 10, p, border=1, fill=fill)
+        
+        for i, metric in enumerate(['Started', 'Submitted', 'Completed', 'Admitted', 'Net_New_Deposits']):
+            c = m26.get(metric, 0)
+            prev = m25.get(metric, 0)
+            
+            c_dom = m26.get(f"{metric}_Dom" if metric != 'Net_New_Deposits' else "Net_New_Dom", 0)
+            c_int = m26.get(f"{metric}_Int" if metric != 'Net_New_Deposits' else "Net_New_Int", 0)
+            
+            val_txt = f"F26: {c} | F25: {prev}"
+            detail_txt = f"Dom: {c_dom} | Int: {c_int}"
+            pct = ""
+            if prev > 0:
+                delta = (c - prev) / prev * 100
+                pct = f"{delta:+.1f}%"
+            
+            x, y = pdf.get_x(), pdf.get_y()
+            cw = col_widths.get(i+1, 39)
+            pdf.rect(x, y, cw, 10, style='FD' if fill else 'D')
+            pdf.set_xy(x, y + 1)
+            pdf.cell(cw, 4, f"{val_txt} ({pct})" if pct else val_txt, align='C')
+            pdf.set_xy(x, y + 5)
+            pdf.set_font('helvetica', '', 7)
+            pdf.set_text_color(100, 100, 100)
+            pdf.cell(cw, 4, detail_txt, align='C')
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font('helvetica', 'B' if p == 'Total' else '', 8)
+            pdf.set_xy(x + cw, y)
+            
+        pdf.ln(10)
+        
+    return bytes(pdf.output())
+
 # --- SIDEBAR ---
 with st.sidebar:
-    # Logo removed as per user request
     st.markdown("### Filters")
-    opts = ["All Programs"] + sorted(df_master['program'].dropna().unique().tolist())
+    opts = ["All Programs"] + sorted(df_master['program_display'].dropna().unique().tolist())
     sel = st.selectbox("Academic Program", opts)
+    
+    st.markdown("---")
+    pdf_bytes = generate_pdf_report(df_master)
+    st.download_button(
+        label="📄 Download PDF Report",
+        data=pdf_bytes,
+        file_name=f"Kogod_Funnel_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        mime="application/pdf",
+        use_container_width=True
+    )
 
-df_filt = df_master if sel == "All Programs" else df_master[df_master['program'] == sel]
+df_filt = df_master if sel == "All Programs" else df_master[df_master['program_display'] == sel]
 
 # --- MAIN PAGE ---
 col1, col2 = st.columns([3, 1])
@@ -343,7 +459,7 @@ def render_view(df_view):
             fig = px.line(clean_pacing, x='activity_doy', y='count', color='term', title="Net New Deposit Pacing",
                           color_discrete_map={'Fall 2026': '#004F9F', 'Fall 2025': '#94A3B8'})
             fig.update_layout(template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(l=20, r=20, t=40, b=20), height=280)
+                              margin={"l": 20, "r": 20, "t": 40, "b": 20}, height=280)
             st.plotly_chart(fig, use_container_width=True)
             
     with chart_c2:
@@ -361,7 +477,7 @@ def render_view(df_view):
         fig2 = px.funnel(pd.DataFrame(dat), x='Val', y='Stage', color='Term', orientation='h', title="Funnel Volume",
                          color_discrete_map={'Fall 2026': '#004F9F', 'Fall 2025': '#94A3B8'})
         fig2.update_layout(template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                           margin=dict(l=20, r=20, t=40, b=20), height=280, legend=dict(orientation="h", y=-0.2))
+                           margin={"l": 20, "r": 20, "t": 40, "b": 20}, height=280, legend={"orientation": "h", "y": -0.2})
         st.plotly_chart(fig2, use_container_width=True)
 
 
