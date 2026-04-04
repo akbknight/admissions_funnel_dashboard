@@ -12,11 +12,7 @@ from fpdf import FPDF  # type: ignore
 import asyncio
 import sys
 
-if sys.platform == 'win32':
-    try:
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    except Exception:
-        pass
+
 
 # --- CONFIGURATION (Must be first) ---
 st.set_page_config(page_title="Kogod Admissions Funnel", layout="wide", initial_sidebar_state="expanded")
