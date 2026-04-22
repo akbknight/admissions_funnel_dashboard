@@ -1,0 +1,28 @@
+program
+Full-Time MBA                                                        126
+MS in Business Analytics and AI                                      115
+MS in Finance with Specialization in Finance Analytics                34
+MS in Finance                                                         29
+MS in Accounting with Specialization in Accounting Analytics          29
+MS in Sustainability Management                                       26
+MS in Management                                                      24
+MS in Accounting                                                      23
+MS in Marketing                                                       14
+MS in Marketing with Specialization in Marketing Analytics             9
+Online MBA                                                             6
+Certificate in Business Fundamentals                                   5
+MS in Analytics                                                        5
+MS in Sustainability Management (Online)                               4
+Bach/MS in Sustainability Management                                   3
+MS in International Relations and Business (Online)                    3
+Certificate in Sustainability                                          2
+Certificate in Forensic Accounting                                     2
+Certificate in Real Estate                                             1
+Certificate in Marketing Analytics                                     1
+Certificate in Islamic Finance                                         1
+Bach/MS in Finance with Specialization in Finance Analytics            1
+Bach/MS in Marketing                                                   1
+Bach/MS in Finance                                                     1
+Bach/MS in Accounting with Specialization in Accounting Analytics      1
+MS in Business Analytics and AI (Online)                               1
+Name: count, dtype: int64

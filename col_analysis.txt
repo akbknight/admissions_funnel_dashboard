@@ -1,0 +1,139 @@
+
+--- Is F1 or J1 Visa Required ---
+Is F1 or J1 Visa Required
+0    501
+1    441
+
+--- Intended US Visa? ---
+Intended US Visa?
+NaN                                 921
+F-1 Student                           9
+Do not know                           4
+J-1 Exchange Visitor                  3
+F-2 Dependent of F-1 Student          1
+J-2 Dependent of J-1 Visa Holder      1
+Other Visa Type                       1
+Online Only Program                   1
+B-2 Tourist                           1
+
+--- Visa Notes ---
+Visa Notes
+NaN    942
+
+--- Visa Request Date ---
+Visa Request Date
+NaN    942
+
+--- Country of Citizenship ---
+Country of Citizenship
+NaN                                734
+Ghana                               35
+Nigeria                             22
+Kenya                               15
+Uganda                              12
+Pakistan                            12
+India                                7
+Zimbabwe                             6
+Ethiopia                             5
+China                                5
+Russian Federation                   4
+Nepal                                4
+Korea, Republic Of                   4
+Gambia                               4
+Peru                                 3
+Uzbekistan                           3
+Netherlands                          3
+Colombia                             3
+Vietnam                              3
+Afghanistan                          2
+Iraq                                 2
+Saudi Arabia                         2
+Chile                                2
+Morocco                              2
+Somalia                              2
+Jamaica                              2
+Malawi                               2
+Rwanda                               2
+Cameroon                             2
+Taiwan                               2
+Spain                                2
+Kazakhstan                           2
+Italy                                2
+Ecuador                              2
+Germany                              1
+Panama                               1
+Portugal                             1
+Liberia                              1
+Bolivia                              1
+Israel                               1
+Tanzania, United Republic Of         1
+Canada                               1
+Albania                              1
+Bangladesh                           1
+El Salvador                          1
+Mexico                               1
+Mozambique                           1
+Palestine                            1
+Azerbaijan                           1
+Bolivia, Plurinational State of      1
+Iran, Islamic Republic Of            1
+South Africa                         1
+SP                                   1
+Thailand                             1
+Jordan                               1
+Dominican Republic                   1
+Philippines                          1
+Saint Kitts And Nevis                1
+Egypt                                1
+United States                        1
+Honduras                             1
+Cambodia                             1
+
+--- Citizenship Status ---
+Citizenship Status
+NaN              587
+NONCITIZEN       206
+CITIZEN          144
+PERMANENTVISA      4
+REFUGEE            1
+
+--- Visa Type ---
+Visa Type
+NaN                                              806
+F-1 Student                                       53
+N-A Not available                                 38
+B-2 Tourist                                       18
+Do not know                                       13
+B-1 Visitor for Business                           3
+F-2 Dependent of F-1 Student                       3
+PND-ASY Pending Asylee                             2
+A-2 Dependent Foreign Diplomatic Personnel         1
+G-4 Dependent of Representative of Intl. Org.      1
+G-5 Employee of G-1,2,3 or 4                       1
+J-2 Dependent of J-1 Visa Holder                   1
+Other Visa Type                                    1
+H-1B Employment visa                               1
+
+--- Visa Outcome ---
+Visa Outcome
+NaN    942
+
+--- Visa Status ---
+Visa Status
+NaN    942
+
+--- Visa Approval Date ---
+Visa Approval Date
+NaN    942
+
+--- Visa Appointment Date ---
+Visa Appointment Date
+NaN    942
+
+--- Other intended visa type ---
+Other intended visa type
+NaN    942
+
+--- Visa Other ---
+Visa Other
+NaN    942

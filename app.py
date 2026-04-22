@@ -1,4 +1,3 @@
-
 import streamlit as st  # type: ignore
 import pandas as pd  # type: ignore
 import duckdb  # type: ignore
@@ -6,13 +5,10 @@ import plotly.express as px  # type: ignore
 import plotly.graph_objects as go  # type: ignore
 from datetime import datetime
 import os
-import textwrap
 import io
+import textwrap
 from fpdf import FPDF  # type: ignore
-import asyncio
-import sys
-
-
+import plotly.io as pio
 
 # --- CONFIGURATION (Must be first) ---
 st.set_page_config(page_title="Kogod Admissions Funnel", layout="wide", initial_sidebar_state="expanded")
@@ -50,32 +46,6 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* TABS */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: transparent;
-        margin-bottom: 1rem;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 40px;
-        white-space: pre-wrap;
-        background-color: var(--card-bg);
-        border-radius: 6px;
-        border: 1px solid var(--border-subtle);
-        color: var(--text-main);
-        font-weight: 600;
-        font-size: 14px;
-        padding: 4px 16px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: var(--brand-blue) !important;
-        color: white !important;
-        border-color: var(--brand-blue) !important;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] p {
-        color: white !important;
-    }
-
     /* FUNNEL GRID */
     .funnel-grid {
         display: grid;
@@ -203,25 +173,33 @@ def load_data():
 df_master = load_data()
 if df_master.empty: st.stop()
 
-# --- PROGRAM CONSOLIDATION ---
+# --- PROGRAM CONSOLIDATION RULES ---
 def remap_program(prog):
-    p = str(prog)
-    if 'Real Estate' in p or 'Taxation' in p:
+    if pd.isna(prog): return None
+    p = str(prog).strip()
+    
+    # 1. Remove exclusions
+    if 'Real Estate' in p or 'Taxation' in p or 'Tax' in p:
         return None
-    if 'Certificate in' in p:
+        
+    # 2. Combine Certificates
+    if 'Certificate' in p:
         return 'Certificates (Combined)'
         
+    # 3. Combine Bach/MS with MS
     if p.startswith('Bach/MS'):
         p = p.replace('Bach/MS', 'MS')
         
-    if p == 'MS in Analytics':
+    # 4. Standardize Analytics
+    if p in ['MS in Analytics', 'MS in Business Analytics and AI']:
         return 'MS in Business Analytics and AI'
-    if p == 'MS in Analytics (Online)':
+    if p in ['MS in Analytics (Online)', 'MS in Business Analytics and AI (Online)']:
         return 'MS in Business Analytics and AI (Online)'
 
+    # 5. MBA Grouping
     if 'MBA' in p:
-        if p.strip() in ['Online MBA', 'LGEP MBA']:
-            return p.strip()
+        if p in ['Online MBA', 'LGEP MBA']:
+            return p
         return 'Full-Time MBA'
         
     return p
@@ -229,10 +207,10 @@ def remap_program(prog):
 df_master['program_display'] = df_master['program'].apply(remap_program)
 df_master = df_master.dropna(subset=['program_display'])
 
-# --- LOGIC ---
+# --- MAPPING LOGIC ---
 df_master['category'] = df_master['program_display'].apply(
-    lambda x: 'MBA' if 'mba' in str(x).lower() 
-    else ('Online' if 'online' in str(x).lower() else 'Specialized Masters')
+    lambda x: 'MBA' if 'MBA' in str(x) 
+    else ('Online' if 'Online' in str(x) else 'Specialized Masters')
 )
 
 def calc_metrics(df, term):
@@ -269,12 +247,9 @@ def html_metric_row(title, k_tot, k_dom, k_int, m26, m25):
     def row_dat(key):
         c, p = m26.get(key,0), m25.get(key,0)
         return f"{c:,}", fmt_pct(c, p)
-    
     v_tot, d_tot = row_dat(k_tot)
     v_dom, d_dom = row_dat(k_dom)
     v_int, d_int = row_dat(k_int)
-    
-    # Flattened HTML to absolutely prevent Markdown code block parsing
     return (
         f'<div class="metric-row">'
         f'<div class="row-title">{title}</div>'
@@ -287,7 +262,6 @@ def html_metric_row(title, k_tot, k_dom, k_int, m26, m25):
 def html_dep_mini(label, key, m26, m25):
     c, p = m26.get(key,0), m25.get(key,0)
     delta = fmt_pct(c, p)
-    
     return (
         f'<div class="dep-mini-card">'
         f'<span class="sub-label" style="margin-bottom:4px;">{label}</span>'
@@ -296,15 +270,39 @@ def html_dep_mini(label, key, m26, m25):
         f'</div></div>'
     )
 
-def generate_pdf_report(df):
+@st.cache_data
+def generate_pdf_report(df, res_filter="All"):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.add_page()
     pdf.set_font('helvetica', 'B', 16)
     pdf.set_text_color(0, 79, 159) # AU Brand Blue
-    pdf.cell(0, 10, f'Kogod Admissions Funnel - Fall 2026 vs Fall 2025 ({datetime.now().strftime("%Y-%m-%d")})', align='C', new_x="LMARGIN", new_y="NEXT")
+    filter_label = f" - Residency: {res_filter}" if res_filter != "All" else ""
+    pdf.cell(0, 10, f'Kogod Admissions Funnel - Fall 2026 vs Fall 2025 ({datetime.now().strftime("%Y-%m-%d")}){filter_label}', align='C', new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
-    # Table Header
+    # Generate Charts for PDF if we have Data
+    try:
+        sub_26 = df[df['term'] == 'Fall 2026'].copy()
+        if not sub_26.empty:
+            agg_prog = sub_26.groupby('program_display').agg(
+                Started=('is_ytd_started', 'sum'), Admitted=('is_ytd_admitted', 'sum'), Deposited=('is_ytd_deposited', 'sum')
+            ).reset_index()
+            melted = agg_prog.melt(id_vars='program_display', var_name='Funnel Stage', value_name='Count')
+            fig_bar = px.bar(melted, x='program_display', y='Count', color='Funnel Stage', barmode='group', title="Program Application Health (Fall 2026)", width=800, height=400)
+            fig_bar.layout.template = 'plotly_white'
+            img_bytes = pio.to_image(fig_bar, format='png', engine='kaleido')
+            with open("temp_chart.png", "wb") as f:
+                f.write(img_bytes)
+            # Add image to PDF
+            pdf.image("temp_chart.png", x=10, w=180)
+            if os.path.exists("temp_chart.png"):
+                os.remove("temp_chart.png")
+            pdf.ln(5)
+    except Exception as e:
+        pass # Silently skip charts generating if kaleido fails
+        
+    # Build Table on Next Page or under
+    pdf.add_page()
     pdf.set_font('helvetica', 'B', 8)
     pdf.set_fill_color(0, 79, 159)
     pdf.set_text_color(255, 255, 255)
@@ -325,8 +323,6 @@ def generate_pdf_report(df):
         m25 = calc_metrics(sub, 'Fall 2025')
         
         pdf.set_font('helvetica', 'B' if p == 'Total' else '', 8)
-        
-        # Determine cell fill
         fill = True if p == 'Total' else False
         if p == 'Total':
             pdf.set_fill_color(240, 240, 240)
@@ -336,7 +332,6 @@ def generate_pdf_report(df):
         for i, metric in enumerate(['Started', 'Submitted', 'Completed', 'Admitted', 'Net_New_Deposits']):
             c = m26.get(metric, 0)
             prev = m25.get(metric, 0)
-            
             c_dom = m26.get(f"{metric}_Dom" if metric != 'Net_New_Deposits' else "Net_New_Dom", 0)
             c_int = m26.get(f"{metric}_Int" if metric != 'Net_New_Deposits' else "Net_New_Int", 0)
             
@@ -370,26 +365,29 @@ with st.sidebar:
     opts = ["All Programs"] + sorted(df_master['program_display'].dropna().unique().tolist())
     sel = st.selectbox("Academic Program", opts)
     
+    res_opts = ["All", "Domestic", "International"]
+    res_sel = st.selectbox("Residency", res_opts)
+    
     st.markdown("---")
-    pdf_bytes = generate_pdf_report(df_master)
+    
+df_filt = df_master.copy()
+if sel != "All Programs":
+    df_filt = df_filt[df_filt['program_display'] == sel]
+if res_sel != "All":
+    df_filt = df_filt[df_filt['residency'] == res_sel]
+
+with st.sidebar:
+    st.markdown("### Export")
+    pdf_bytes = generate_pdf_report(df_filt, res_sel)
     st.download_button(
         label="📄 Download PDF Report",
         data=pdf_bytes,
-        file_name=f"Kogod_Funnel_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        file_name=f"Kogod_Funnel_{datetime.now().strftime('%Y%m%d')}.pdf",
         mime="application/pdf",
         use_container_width=True
     )
 
-df_filt = df_master if sel == "All Programs" else df_master[df_master['program_display'] == sel]
-
-# --- MAIN PAGE ---
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown(f"## Kogod Admissions Funnel")
-    st.markdown(f"<span style='opacity:0.7; font-weight:500;'>Year-over-Year Comparison: Fall 2026 vs Fall 2025</span>", unsafe_allow_html=True)
-
-st.markdown("---")
-
+# --- MAIN PAGE VIEWS ---
 def render_view(df_view):
     if df_view.empty:
         st.info("No Data Available for this selection.")
@@ -398,16 +396,13 @@ def render_view(df_view):
     m26 = calc_metrics(df_view, 'Fall 2026')
     m25 = calc_metrics(df_view, 'Fall 2025')
     
-    # 1. DEPOSIT SECTION
-    st.markdown("#### Deposit Analysis")
+    # DEPOSIT SECTION
     with st.container():
         c1, c2 = st.columns([1, 2])
         with c1:
             curr, prev = m26['Net_New_Deposits'], m25['Net_New_Deposits']
             d_txt = f"{((curr-prev)/prev*100):+.1f}% YoY" if prev > 0 else "N/A"
             gross = m26['Deposited_Total']
-            
-            # Flattened HTML
             st.markdown((
                 f'<div class="dep-high-level">'
                 f'<div class="dep-hl-item">'
@@ -431,8 +426,7 @@ def render_view(df_view):
                 f'</div>'
             ), unsafe_allow_html=True)
             
-    # 2. FUNNEL GRID
-    st.markdown("#### Funnel Progression")
+    # FUNNEL GRID
     st.markdown((
         f'<div class="funnel-grid">'
         f'{html_metric_row("Started", "Started", "Started_Dom", "Started_Int", m26, m25)}'
@@ -442,50 +436,73 @@ def render_view(df_view):
         f'</div>'
     ), unsafe_allow_html=True)
     
-    # 3. CHARTS
+    # CHARTS (Funnel and Pacing)
     chart_c1, chart_c2 = st.columns(2)
     with chart_c1:
-        # Pacing
         pacing = df_view[(df_view['is_ytd_deposited']==1) & (df_view['is_ytd_deferred']==0)].copy()
         if not pacing.empty:
             agg = pacing.groupby(['term', 'activity_doy'])['id'].count().reset_index().sort_values('activity_doy')
             piv = agg.pivot(index='activity_doy', columns='term', values='id').fillna(0).cumsum().reset_index()
             clean_pacing = piv.melt(id_vars='activity_doy', var_name='term', value_name='count')
-            
-            fig = px.line(clean_pacing, x='activity_doy', y='count', color='term', title="Net New Deposit Pacing",
-                          color_discrete_map={'Fall 2026': '#004F9F', 'Fall 2025': '#94A3B8'})
-            fig.update_layout(template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                              margin={"l": 20, "r": 20, "t": 40, "b": 20}, height=280)
+            fig = px.line(clean_pacing, x='activity_doy', y='count', color='term', title="Net New Deposit Pacing", color_discrete_map={'Fall 2026': '#004F9F', 'Fall 2025': '#94A3B8'})
+            fig.update_layout(template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin={"l": 20, "r": 20, "t": 40, "b": 20}, height=280)
             st.plotly_chart(fig, use_container_width=True)
             
     with chart_c2:
-        # Funnel Bar
         dat = [
-            {'Stage': 'Started', 'Val': m26['Started'], 'Term': 'Fall 2026'},
-            {'Stage': 'Started', 'Val': m25['Started'], 'Term': 'Fall 2025'},
-            {'Stage': 'Submitted', 'Val': m26['Submitted'], 'Term': 'Fall 2026'},
-            {'Stage': 'Submitted', 'Val': m25['Submitted'], 'Term': 'Fall 2025'},
-            {'Stage': 'Admitted', 'Val': m26['Admitted'], 'Term': 'Fall 2026'},
-            {'Stage': 'Admitted', 'Val': m25['Admitted'], 'Term': 'Fall 2025'},
-            {'Stage': 'Net New', 'Val': m26['Net_New_Deposits'], 'Term': 'Fall 2026'},
-            {'Stage': 'Net New', 'Val': m25['Net_New_Deposits'], 'Term': 'Fall 2025'}
+            {'Stage': 'Started', 'Val': m26['Started'], 'Term': 'Fall 2026'}, {'Stage': 'Started', 'Val': m25['Started'], 'Term': 'Fall 2025'},
+            {'Stage': 'Submitted', 'Val': m26['Submitted'], 'Term': 'Fall 2026'}, {'Stage': 'Submitted', 'Val': m25['Submitted'], 'Term': 'Fall 2025'},
+            {'Stage': 'Admitted', 'Val': m26['Admitted'], 'Term': 'Fall 2026'}, {'Stage': 'Admitted', 'Val': m25['Admitted'], 'Term': 'Fall 2025'},
+            {'Stage': 'Net New', 'Val': m26['Net_New_Deposits'], 'Term': 'Fall 2026'}, {'Stage': 'Net New', 'Val': m25['Net_New_Deposits'], 'Term': 'Fall 2025'}
         ]
-        fig2 = px.funnel(pd.DataFrame(dat), x='Val', y='Stage', color='Term', orientation='h', title="Funnel Volume",
-                         color_discrete_map={'Fall 2026': '#004F9F', 'Fall 2025': '#94A3B8'})
-        fig2.update_layout(template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                           margin={"l": 20, "r": 20, "t": 40, "b": 20}, height=280, legend={"orientation": "h", "y": -0.2})
+        fig2 = px.funnel(pd.DataFrame(dat), x='Val', y='Stage', color='Term', orientation='h', title="Funnel Volume YoY", color_discrete_map={'Fall 2026': '#004F9F', 'Fall 2025': '#94A3B8'})
+        fig2.update_layout(template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin={"l": 20, "r": 20, "t": 40, "b": 20}, height=280, legend={"orientation": "h", "y": -0.2})
         st.plotly_chart(fig2, use_container_width=True)
 
+# HEADER
+col_h1, col_h2 = st.columns([3, 1])
+with col_h1:
+    st.markdown(f"## Kogod Admissions Funnel Dashboard")
+    st.markdown(f"<span style='opacity:0.7; font-weight:500;'>Year-over-Year Comparison: Fall 2026 vs Fall 2025</span>", unsafe_allow_html=True)
+st.markdown("---")
 
-# --- RENDER LOGIC: SMART TABS VS SINGLE PROGRAM ---
+# MAIN RENDER
 if sel == "All Programs":
-    # Show Tabs
-    st.caption("View by Program Category:")
-    t_mba, t_online, t_spec = st.tabs(["MBA", "Online Programs", "Specialized Masters"])
-    with t_mba: render_view(df_filt[df_filt['category'] == 'MBA'])
-    with t_online: render_view(df_filt[df_filt['category'] == 'Online'])
-    with t_spec: render_view(df_filt[df_filt['category'] == 'Specialized Masters'])
+    st.markdown("### 📊 Global Summary & Comparison")
+    
+    sub_26 = df_filt[df_filt['term'] == 'Fall 2026'].copy()
+    if not sub_26.empty:
+        agg_prog = sub_26.groupby('program_display').agg(
+            Started=('is_ytd_started', 'sum'),
+            Admitted=('is_ytd_admitted', 'sum'),
+            Deposited=('is_ytd_deposited', 'sum')
+        ).reset_index()
+        
+        melted = agg_prog.melt(id_vars='program_display', var_name='Funnel Stage', value_name='Count')
+        fig_bar = px.bar(melted, x='program_display', y='Count', color='Funnel Stage', 
+                 barmode='group', title="Fall 2026: Program Application Health",
+                 color_discrete_map={'Started': '#94A3B8', 'Admitted': '#0ea5e9', 'Deposited': '#004F9F'})
+                 
+        pie_data = agg_prog[agg_prog['Deposited'] > 0]
+        fig_pie = px.pie(pie_data, names='program_display', values='Deposited', hole=0.4, title="Fall 2026: Share of Deposits")
+        
+        col_c1, col_c2 = st.columns([2, 1])
+        with col_c1:
+            st.plotly_chart(fig_bar, use_container_width=True)
+        with col_c2:
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+    st.markdown("---")
+    
+    st.markdown("### 📈 Detailed Breakdown by Category")
+    
+    for cat in ["MBA", "Online", "Specialized Masters"]:
+        cat_df = df_filt[df_filt['category'] == cat]
+        if not cat_df.empty:
+            st.markdown(f"<h4 style='color: var(--brand-blue); border-bottom: 2px solid var(--brand-red); margin-top:20px; padding-bottom: 4px;'>{cat} Overview</h4>", unsafe_allow_html=True)
+            render_view(cat_df)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
 else:
-    # Single Program Mode - No Tabs, just show the data
     st.markdown(f"### Performance: {sel}")
     render_view(df_filt)

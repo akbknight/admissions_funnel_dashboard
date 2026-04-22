@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Constants
-RAW_DIR = "data/raw"
+RAW_DIR = r"C:\Users\Akshay Kumar\Downloads\06_Projects_and_Code\Admissions_Funnel_Dashboard\admissions_funnel_dashboard\data\raw"
 PROCESSED_DIR = "data/processed"
 OUTPUT_FILE = os.path.join(PROCESSED_DIR, "master_funnel_data.parquet")
 
@@ -81,11 +81,11 @@ def process_data(df_f26, df_f25):
             'Fall 2026' as term,
             "Learning Program Lookup" as program,
             CASE 
-                WHEN "Citizenship Status" IN ('International', 'Non-U.S. Citizen', 'Non-Citizen', 'Foreign National') THEN 'International'
-                WHEN CAST("Is F1 or J1 Visa Required" AS VARCHAR) IN ('Yes', 'TRUE', '1', 'True', 'true') THEN 'International'
+                WHEN "Citizenship Status" IN ('NONCITIZEN', 'REFUGEE') THEN 'International'
+                WHEN CAST("Is F1 or J1 Visa Required" AS VARCHAR) IN ('1', '1.0', 'Yes', 'TRUE', 'True', 'true') THEN 'International'
                 WHEN "Country of Citizenship" IS NOT NULL AND "Country of Citizenship" NOT IN ('United States', 'US', 'USA', 'U.S.', 'United States of America', '') THEN 'International'
-                WHEN "Citizenship Status" IN ('U.S. Citizen', 'Domestic', 'Permanent Resident', 'US Citizen') THEN 'Domestic'
-                ELSE 'Unknown'
+                WHEN "Citizenship Status" IN ('CITIZEN', 'PERMANENTVISA') THEN 'Domestic'
+                ELSE 'Domestic'
             END as residency,
             "Application Status" as status,
             "Application Substatus" as substatus,
