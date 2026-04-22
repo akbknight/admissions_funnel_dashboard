@@ -84,4 +84,4 @@ git push origin main
 ```
 
 **And you are done!** 🥳
-Within a few minutes, the live dashboard link on Streamlit will magically refresh itself and show the whole world your brand new numbers!
+Within a few minutes, the live dashboard on Streamlit will magically refresh itself and show the whole world your brand new numbers! You can view the live dashboard directly here: [Live Admissions Dashboard](https://admissionsfunneldashboard-8pbzttpynneixaywcls7rx.streamlit.app/)
