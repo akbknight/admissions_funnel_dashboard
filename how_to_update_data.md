@@ -1,4 +1,4 @@
-# 🍼 The Super-Simple "Explain It Like I'm 5" Guide: Updating the Admissions Dashboard
+#  Guide: Updating the Admissions Dashboard
 
 Welcome! This guide is going to show you exactly how to update our dashboard with new numbers. Think of the dashboard like a magic coloring book, and you are about to give it new colors!
 
