@@ -503,6 +503,26 @@ if sel == "All Programs":
             render_view(cat_df)
             st.markdown("<br>", unsafe_allow_html=True)
             
+    st.markdown("---")
+    st.markdown("### 📋 Program-by-Program Summary Table")
+    
+    # Create the Data Table for Streamlit
+    table_data = []
+    for p in sorted(df_filt['program_display'].unique()):
+        sub = df_filt[df_filt['program_display'] == p]
+        m26 = calc_metrics(sub, 'Fall 2026')
+        table_data.append({
+            'Program': p,
+            'Started': m26.get('Started', 0),
+            'Submitted': m26.get('Submitted', 0),
+            'Completed': m26.get('Completed', 0),
+            'Admitted': m26.get('Admitted', 0),
+            'Deposited': m26.get('Deposited_Total', 0),
+            'Net New Deposits': m26.get('Net_New_Deposits', 0)
+        })
+    if table_data:
+        st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
+            
 else:
     st.markdown(f"### Performance: {sel}")
     render_view(df_filt)

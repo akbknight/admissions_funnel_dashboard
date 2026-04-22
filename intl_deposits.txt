@@ -1,0 +1,12 @@
+program
+MS in Business Analytics and AI                                      3
+MS in Finance with Specialization in Finance Analytics               2
+Bach/MS in Sustainability Management                                 1
+Bach/MS in Finance with Specialization in Finance Analytics          0
+Bach/MS in Finance                                                   0
+Certificate in Business Fundamentals                                 0
+Certificate in Forensic Accounting                                   0
+Certificate in Islamic Finance                                       0
+Bach/MS in Marketing                                                 0
+Bach/MS in Accounting with Specialization in Accounting Analytics    0
+Name: is_ytd_deposited, dtype: Int64
