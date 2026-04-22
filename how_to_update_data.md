@@ -17,9 +17,8 @@ Right now, the project lives inside a big clubhouse on the internet called **Git
 1. Open up your "Terminal" (Mac) or "Command Prompt" (Windows)—it looks like a little black box where you can type things.
 2. Tell the computer to grab the project by typing this and hitting Enter:
    ```bash
-   git clone <GITHUB_REPO_URL>
+   git clone https://github.com/akbknight/admissions_funnel_dashboard.git
    ```
-   *(Make sure to replace `<GITHUB_REPO_URL>` with the real link we gave you!)*
 3. Now, walk into that folder you just downloaded by typing:
    ```bash
    cd admissions_funnel_dashboard
